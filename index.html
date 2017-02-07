@@ -1,0 +1,147 @@
+<div class="ui segment">
+  <div id="addinput" class="ui action input">
+    <input id="field" type="text" placeholder="Field...">
+    <button id="add" class="ui button">
+      <i class="plus icon"></i>
+      Add
+    </button>
+  </div>
+  <button id="done" class="ui button">
+    Done
+  </button>
+  <br />
+  <br />
+  <div id="example1" class="hot handsontable htRowHeaders htColumnHeaders"></div>
+
+  <br />
+  <br />
+
+  <div id="fields" class="ui buttons hidden">
+  </div>
+  <button id="submit" class="ui button hidden">
+    Submit
+  </button>
+  <br />
+  <div id="messageform" class="ui form hidden">
+    <div class="field">
+      <label>Message template</label>
+      <textarea id="message"></textarea>
+    </div>
+  </div>
+  <br />
+  <div id="messagesform" class="ui form hidden">
+    <div class="field">
+      <label>Messages</label>
+      <textarea id="messages"></textarea>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.1/jquery.min.js"></script>
+<script src="https://docs.handsontable.com/0.30.1/bower_components/handsontable/dist/handsontable.full.js"></script>
+<link type="text/css" rel="stylesheet" href="https://docs.handsontable.com/0.30.1/bower_components/handsontable/dist/handsontable.full.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.7/semantic.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.7/semantic.min.js"></script>
+<style>
+.hidden{
+  display: none!important;
+}
+</style>
+
+<script>
+    $(document).ready(function () {
+        var container = $('#example1')[0];
+
+        var hot = null;
+
+        var currentIndex = 1;
+
+        $('#done').on('click', function () {
+          if(hot) {
+            $('#addinput').addClass('disabled');
+            $('#messageform').removeClass('hidden');
+            $('#submit').removeClass('hidden');
+            $('#fields').removeClass('hidden');
+
+            hot.updateSettings({
+              readOnly: true
+            });
+
+            var headers = hot.getDataAtRow(0);
+
+            headers.forEach(function (header) {
+              var button = '<button class="ui button template-header">' + header + '</button>';
+
+              $('#fields').append(button);
+            });
+          } else {
+            alert('Must add fields first');
+          }
+        });
+
+        $('#fields').on('click', '.template-header', function () {
+          var value = ' {' + $(this).text() + '} ';
+
+          var message = $('#message').val();
+
+          $('#message').val(message + value);
+
+          $('#message').focus();
+        });
+
+        $('#submit').on('click', function () {
+          var total = hot.countRows() - 1;
+
+          var messages = [];
+
+          var headers = hot.getDataAtRow(0);
+
+          for(var i = 1; i <= total; i++) {
+            var message = $('#message').val();
+            var replacements = message.match(/(?:\{)[^\(\)]*?(?:\})/g);
+
+            let rowData = hot.getDataAtRow(i);
+
+            replacements.forEach(function (replacement) {
+              var field = replacement.replace('{', '').replace('}', '');
+
+              var fieldIndex = headers.indexOf(field);
+
+              message = message.replace(replacement, rowData[fieldIndex]);
+            });
+
+            messages.push(message);
+          }
+
+          $('#messages').val(messages.join('\n'));
+          $('#messagesform').removeClass('hidden');
+          $('#fields').addClass('hidden');
+          $('#submit').addClass('hidden');
+          $('#message').prop('readonly', 'true');
+          $('#messages').prop('readonly', 'true');
+        });
+
+        $('#add').on('click', function () {
+          let field = $('#field').val();
+
+          $('#field').val('');
+
+          if(field) {
+            if (!hot) {
+              hot = new Handsontable(container, {
+                data: [[field], ['']],
+                startRows: 2,
+                startCols: 1,
+                colWidths: 150,
+                rowHeaders: true,
+                colHeaders: false
+              });
+            } else {
+              hot.alter('insert_col', currentIndex);
+              hot.setDataAtCell(0, currentIndex, field);
+              currentIndex++;
+            }
+          }
+        });
+  });
+</script>
